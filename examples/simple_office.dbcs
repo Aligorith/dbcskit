@@ -1,0 +1,26 @@
+# Simple ER diagram for testing the pipeline
+# Joshua Leung
+#
+# NOTE: this one is best run using Neato
+
+# > THE MODEL ---
+model = Model("Simple Office", "Simple Experimental ER Diagram", ["Joshua Leung"])
+
+# > ENTITIES ---
+eEmployee = Entity(model, "EMPLOYEE")
+eEmployee += Attr("SSN", key=True)
+eEmployee += Attr("Name", components=[Attr("FName"), Attr("LName")])
+eEmployee += MultiAttr("Degrees")
+
+eDept = Entity(model, "DEPARTMENT")
+eDept += Attr("Code", key=True)
+eDept += Attr("Name")
+
+# > RELATIONSHIPS
+# employee works for department
+Rel(model, "WORKS_FOR", [Link(eEmployee, TOTAL_MANY), Link(eDept, TOTAL_MANY)])
+
+# employee manages a department
+Rel(model, "MANAGES", [Link(eEmployee, PARTIAL_SINGLE), Link(eDept, TOTAL_SINGLE)])
+
+# TODO: employee supervises another...
