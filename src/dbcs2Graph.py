@@ -41,9 +41,7 @@ def writeAttribute (f, owner_name, attr):
 	f.write('\t\t"%s" [%s];\n' % (aName, ",".join(opts) ));
 	
 	# link to owner
-	#f.write('\t%s -- %s [len=1.00];\n' % (owner_name, aName));
 	f.write('\t\t%s -- %s [len=0.5];\n' % (owner_name, aName));
-	#f.write('\t%s -- %s;\n' % (owner_name, aName));
 	
 	# for composite attributes, include the component attributes
 	# NOTE: we simply define a composite attribute as one which can store 
@@ -96,7 +94,6 @@ def writeSpec (f, spec, index):
 		# write a link from spec to the entity that owns it
 		# 	- options
 		opts = ['shape="tee"', 'dir=forward'];
-		#opts.append('len=1.30');
 		opts.append('len=1.30');
 		#	- write the link
 		f.write('\t%s -- %s [%s];\n' % (owner_name, dEntity.name, ",".join(opts) ));
@@ -104,17 +101,10 @@ def writeSpec (f, spec, index):
 # write the links for specialisations for the given entity
 # TODO: maybe we should just do all specs in one pass?
 def writeEntitySpecs (f, entity):
-	# entity specialisations
-	if len(entity.specialisations) > 1:
-		# write each specialisation and it's links
-		for i,spec in enumerate(entity.specialisations):
-			writeSpec(f, spec, i);
-		f.write("\n");
-	elif len(entity.specialisations) == 1:
-		# special case where we have total specialisation
-		# TODO: for really useful system, must be able to specify this...
-		writeSpec(f, entity.specialisations[0], 0);
-		f.write("\n");	
+	# write each specialisation and it's links
+	for i,spec in enumerate(entity.specialisations):
+		writeSpec(f, spec, i);
+	f.write("\n");
 
 # write the given entity to the graph file
 def writeEntity (f, entity):
@@ -170,7 +160,6 @@ def writeRelationship (f, rel):
 		
 		# NOTE: just use structural constraints instead of worrying about participation vs cardinality
 		opts.append('label="(%s,%s)"' % link.structCon);
-		#opts.append('len=1.50');
 		opts.append('len=1.0');
 		
 		# write the link
@@ -268,18 +257,19 @@ if __name__ == '__main__':
 	print("DataBase Conceptual Schema (EER) to Graphed Representation");
 	print("Copyright 2010, Joshua Leung (aligorith@gmail.com)\n");
 	
+	# graphviz engine to use
+	gv_engines = ["neato", "fdp", "sfdp", "dot"];
+	gv_engine = gv_engines[0];
+	
 	# parse arguments - file names for now
 	if len(sys.argv) > 1:
 		# argv[0] = scriptname...
 		for fileN in sys.argv[1:]:
-			# convert the file, but don't execute GraphViz on it yet...
-			convertSchema(fileN);
+			if convertSchema(fileN):
+				run_graphviz(gv_engine, fileN);
 	else:
 		# TODO: allow more than one file to be processed...
 		fileN = raw_input("File Name: ");
 		if convertSchema(fileN):
-			run_graphviz("neato", fileN);
-			#run_graphviz("dot", fileN);
-			#run_graphviz("fdp", fileN);
-			#run_graphviz("sfdp", fileN);
+			run_graphviz(gv_engine, fileN);
 		
