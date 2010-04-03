@@ -7,6 +7,8 @@
 import sys
 import os
 
+from optparse import OptionParser
+
 from dbcsTypes import *
 import dbcsLoader
 
@@ -81,7 +83,6 @@ def writeSpec (f, spec, index):
 			opts.append('color="black:black"');
 		if spec.role:
 			opts.append('label="%s"' % spec.role);
-		#opts.append('len=1.50');
 		opts.append('len=1.50');
 		#	- write the link
 		f.write('\t%s -- %s [%s];\n' % (owner_name, my_name, ",".join(opts) ));
@@ -199,8 +200,7 @@ def createGraph (fileN, model):
 	labelStr += "by %s" % (model.getAuthorsString());
 	f.write('\n\tlabel = "%s"\n' % (labelStr));
 	# 	- other settings
-	#f.write('\toverlap = "none"\n');
-	f.write('\toverlap = scalexy\n'); # very spaced out, but doesn't overlap... use later since is a bit slower
+	f.write('\toverlap = scalexy\n'); # very spaced out, but doesn't overlap... 
 	
 	# finishing up
 	f.write('}\n');
@@ -252,28 +252,73 @@ def run_graphviz(gv_engine, format, fileN):
 		print("!! Done... :)");
 	
 ##################################
-	
-if __name__ == '__main__':
+
+# graphviz engines 
+# TODO: no engine = skip?
+gv_engines = ["neato", "fdp", "sfdp", "dot"];
+
+# output formats
+# TODO: what about other formats?
+formats = ["png", "svg"];
+
+# -----------
+
+def main ():
+	# always print version info first...
+	# TODO: we should have a way to supress this for super-scripts...
 	print("DataBase Conceptual Schema (EER) to Graphed Representation");
 	print("Copyright 2010, Joshua Leung (aligorith@gmail.com)\n");
 	
+	# set up option parser for managing the commandline args
+	usage = "usage: %prog [-e enginename] [-f format] [file1 [file2 [...]]]";
+	parser = OptionParser(usage);
+	parser.add_option("-e", "--engine", dest="gv_engine", 
+			default="neato", type="string",
+			help="Name of GraphViz engine to render the file with (out of %s)" % gv_engines)
+	parser.add_option("-f", "--format", dest="format", 
+			default="png", type="string",
+			help="Name of output file format to render to (out of %s)" % formats)
+	
+	# parse commandline options
+	(options, args) = parser.parse_args()
+	
 	# graphviz engine to use
-	gv_engines = ["neato", "fdp", "sfdp", "dot"];
-	gv_engine = gv_engines[0];
-	
+	if (options.gv_engine) and (options.gv_engine in gv_engines):
+		gv_engine = options.gv_engine;
+	else:
+		gv_engine = gv_engines[0]; # default to 'neato' again
 	# output format
-	formats = ["png", "svg"];
-	format = formats[0];
+	if (options.format) and (options.format in formats):
+		format = options.format;
+	else:
+		format = formats[0]; # default to 'png' again
 	
-	# parse arguments - file names for now
-	if len(sys.argv) > 1:
+	# parse filename arguments
+	if len(args) >= 1:
 		# argv[0] = scriptname...
 		for fileN in sys.argv[1:]:
+			# print info on file we're handling
+			print("$ Processing file ===> %s ..." % fileN);
+			
+			# convert the file, then run graphviz on it 
 			if convertSchema(fileN):
 				run_graphviz(gv_engine, format, fileN);
+			
+			# insert linebreak before next file for clarity
+			print("\n"); 
 	else:
-		# TODO: allow more than one file to be processed...
-		fileN = raw_input("File Name: ");
-		if convertSchema(fileN):
-			run_graphviz(gv_engine, format, fileN);
+		# keep looping while user keeps supplying valid filenames 
+		while True:
+			# get file name to operate on 
+			fileN = raw_input(">> File Name (or <Enter> to exit): ");
+			
+			# no filename given? any trigger to exit...
+			if len(fileN) == 0: 
+				break;
+			
+			# try to process file
+			if convertSchema(fileN):
+				run_graphviz(gv_engine, format, fileN);
 		
+if __name__ == '__main__':
+	main();

@@ -32,11 +32,18 @@ def readDBCS (fileN):
 	# secondly, 'execute' the file the user has given us into this dict
 	# too, but be prepared for errors:
 	try:
-		execfile(fileN, d);
+		# check if the filename is valid before executing...
+		if os.path.exists(fileN):
+			# file exists, so try to process it
+			execfile(fileN, d);
+		else:
+			# file doesn't exist, so we shouldn't throw a nasty error...
+			sys.stderr.write("ERROR: invalid filename %s \n" % fileN);
+			return None
 	except:
-		sys.stderr.write("ERROR: an error in the input file %s was encountered while reading. Details follow...\n");
+		sys.stderr.write("ERROR: an error in the input file %s was encountered while reading. Details follow...\n" % fileN);
 		# ...
-		raise; # XXX?
+		raise; # XXX: we should try to nicely format the error to expose only what the user needs to know...
 		
 	# try to return the model created
 	if d.has_key('model'):
