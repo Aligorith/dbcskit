@@ -235,16 +235,16 @@ def convertSchema (fileN):
 	return True;
 	
 # run GraphViz on this if required
-def run_graphviz(gv_engine, fileN):
+def run_graphviz(gv_engine, format, fileN):
 	print("$ Running GraphViz (%s) to produce diagram..." % gv_engine)
 	
 	# get filename for graph representation
 	fileG = dbcsLoader.changeExtension(fileN, "dot");
 	# get filename for output image
-	fileP = dbcsLoader.changeExtension(fileN, "png");
+	fileP = dbcsLoader.changeExtension(fileN, format);
 	
 	# run graphviz (specifically the 'neato' module), to produce a png of this...
-	status = os.system("%s -Tpng %s > %s" % (gv_engine, fileG, fileP));
+	status = os.system("%s -T%s %s > %s" % (gv_engine, format, fileG, fileP));
 	
 	if status:
 		print("!! Failed with %d! :( " % status)
@@ -261,15 +261,19 @@ if __name__ == '__main__':
 	gv_engines = ["neato", "fdp", "sfdp", "dot"];
 	gv_engine = gv_engines[0];
 	
+	# output format
+	formats = ["png", "svg"];
+	format = formats[0];
+	
 	# parse arguments - file names for now
 	if len(sys.argv) > 1:
 		# argv[0] = scriptname...
 		for fileN in sys.argv[1:]:
 			if convertSchema(fileN):
-				run_graphviz(gv_engine, fileN);
+				run_graphviz(gv_engine, format, fileN);
 	else:
 		# TODO: allow more than one file to be processed...
 		fileN = raw_input("File Name: ");
 		if convertSchema(fileN):
-			run_graphviz(gv_engine, fileN);
+			run_graphviz(gv_engine, format, fileN);
 		
