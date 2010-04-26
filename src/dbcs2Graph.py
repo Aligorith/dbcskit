@@ -220,10 +220,7 @@ def convertSchema (fileN):
 	model = dbcsLoader.readDBCS(fileN);
 	if model is None:
 		return False;
-		
-	# TODO: add a call to a module which helps validate the schema :)
-	# 	-> could lead to this becoming a bit of an "la computadora tutor inteligente"
-		
+	
 	print("$ Writing graphviz (.dot) version...")
 	# get filename for graph representation
 	fileG = dbcsLoader.changeExtension(fileN, "dot");

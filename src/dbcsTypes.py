@@ -156,7 +156,7 @@ class Entity:
 	
 	# Overloaded concatenation operator - for adding attributes easier
 	__add__ = add;
-		
+
 # A weak entity type
 # NOTE: we could perform special validation to make identifying rel exist, but instead we'll just trust that it does
 # TODO: perhaps that is still the better option, since then we can validate the graph..
