@@ -136,7 +136,7 @@ class Entity:
 			self.attributes.append(item);
 			
 			# if this attribute is tagged as being a key...
-			if item.key:
+			if item.key == True:
 				# make it our key if we haven't got one yet
 				if self.key == None:
 					self.key = item;
@@ -158,10 +158,21 @@ class Entity:
 	__add__ = add;
 
 # A weak entity type
-# NOTE: we could perform special validation to make identifying rel exist, but instead we'll just trust that it does
-# TODO: perhaps that is still the better option, since then we can validate the graph..
+# NOTE: we cannot check if the weak entity has an identifying relationship when it
+# is defined with this design, but that can be better checked once everything is 
+# define (in a post-process verification app)
 class WeakEntity (Entity):
-	pass;
+	__slots__ = [
+		'identifying_rel',	# identifying relationship for weak entity
+	]
+	
+	# Constructor 
+	def __init__ (self, model, name, specs_of=[]):
+		# call parent constructor first to do the basics...
+		Entity.__init__(self, model, name, specs_of);
+		
+		# init own vars
+		self.identifying_rel = None;
 	
 # -----------
 
@@ -269,7 +280,23 @@ class Rel:
 # NOTE: this is really just a direct copy of Relationship...
 # TODO: need to override the constructor to validate constraints!
 class IdentifyingRel (Rel):
-	pass;
+	# Constructor 
+	def __init__ (self, model, name, links):
+		# call parent constructor first to do the basics...
+		Rel.__init__(self, model, name, links);
+		
+		# now, find the weak entity in this rel that this identifies,
+		# and make sure that it knows about this rel...
+		for link in self.links:
+			if isinstance(link.entity, WeakEntity):
+				# check if this has an identifing rel yet
+				if link.entity.identifying_rel == None:
+					# this is the weak entity that we're identifying!
+					link.entity.identifying_rel = self;
+					break;
+		else:
+			# no weak entity to identify, or all the ones given have already been identified
+			raise ValueError, "No unidentified Weak Entity is identified by IdentifyingRel '%s'" % (self.name)
 	
 # Link
 class Link:

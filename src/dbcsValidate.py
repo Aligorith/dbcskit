@@ -1,3 +1,6 @@
+# DBCSKIT - EER Modelling Toolkit
+# Copyright 2010, Joshua Leung (aligorith aT gmail DoT com)
+#
 # Automated tool to analyse the dbcs and check that it is valid 
 # (i.e. no missing keys, etc.)
 # 
@@ -5,7 +8,13 @@
 # a requirements text, and check whether all major specs have been
 # fulfilled.
 
+import sys
+import os
+
+from optparse import OptionParser
+
 from dbcsTypes import *
+import dbcsLoader
 
 ###########################
 # BASE TYPES
@@ -25,6 +34,10 @@ class ModelError:
 		self.item_name = str(item_name);
 		self.error = str(error);
 		self.info = info;
+		
+	# Report an error into the stream specified
+	def report (self, stream):
+		stream.write("X -- %s | Item: %s | Info: %s \n" % (self.error, self.item_name, self.info));
 
 # ------------
 
@@ -74,6 +87,11 @@ class ValidityCheck:
 	# Overloaded concatenation operator - for adding attributes easier
 	__add__ = add;
 	
+	
+	# Iterator interface - get iterator over list of errors
+	def __iter__ (self):
+		return iter(self.errors);
+	
 ###########################
 # CHECKS TO PERFORM
 
@@ -88,6 +106,7 @@ class Test_Entity_Keys (ValidityCheck):
 		# check each entity
 		for entity in model.entities:
 			# check that the entity has a key attribute
+			# FIXME: ignore if this is only a specialisation of types with keys...
 			if entity.key is None:
 				self += ModelError(model, entity.name, "Missing key attribute", None);
 
@@ -103,12 +122,28 @@ class Test_WeakEntity_ID (ValidityCheck):
 		for entity in model.entities:
 			# if this is a weak entity, perform checks
 			if isinstance(entity, WeakEntity):
-				self._check(model, entity);
-	
-	# helper function for checkValid() 
-	def _check (self, model, entity):
-		# find all identifying relationships involving this
-		pass;
+				self._check_entity(model, entity);
+			
+	def _check_entity (self, model, entity):
+		# weak entity must be identified 
+		if entity.identifying_rel == None:
+			self += ModelError(model, entity.name, "Weak Entity has no identifying relationship", None);
+			return;
+		rel = entity.identifying_rel;
+		
+		# check how it relates to the other entities
+		for i,link in enumerate(rel.links):
+			# is this own link to this rel?
+			if link.entity is entity:
+				# check structural constraints:
+				#	- must participate (min=1)!
+				if link.structCon[0] < 1:
+					debugInfo = "L=%d->%s, min=%d" % (i, link.entity.name, link.structCon[0]);
+					self += ModelError(model, rel.name, "Weak Entity cannot NOT Participate in Identifying Relationship", debugInfo);
+			else:
+				# each other entity is free to participate at most once?
+				# TODO: reconsider this!
+				pass
 
 # Check that each relationship has at least 2 links
 # 	- links may refer to same target for recursive rels
@@ -128,13 +163,13 @@ class Test_Relationship_Degrees (ValidityCheck):
 				if link.entity is None:
 					debugInfo = "i=%d" % (i);
 					self += ModelError(model, rel.name, "Relationship link has missing participant", debugInfo);
-				# structural constraint must exist, and have 2 elements
+				# structural constraint must exist, and have 2 elements (which must be +ve ints, or 'N')
 				elif link.structCon is None:
 					debugInfo = "i=%d" % (i);
 					self += ModelError(model, rel.name, "Relationship link has missing structural constraint", debugInfo);
 				elif (len(link.structCon) != 2) or \
 						(type(link.structCon[0]) is not int) or \
-						(type(link.structCon[1]) is not int):
+						((type(link.structCon[1]) is not int) and (link.structCon[1] != 'N')):
 					debugInfo = "i=%d, structCon=%s" % (i, link.structCon);
 					self += ModelError(model, rel.name, "Relationship link has structural constraint of that isn't of the form (min,max), where min/max are integers", debugInfo); 
 				# otherwise, link is ok...
@@ -152,8 +187,9 @@ class Test_Relationship_Degrees (ValidityCheck):
 # basic set of tests to perform
 BASIC_TESTS = [
 	Test_Entity_Keys,
+	#Test_Entity_Descriptive,
+	Test_Relationship_Degrees,
 	Test_WeakEntity_ID,
-	Test_Relationship_Degrees
 ]
 
 # ------------
@@ -169,28 +205,32 @@ def validateModel (model, checks):
 	# run each test, and see if it passes
 	for check in checks:
 		# verify that this is a valid check
-		if isinstance(check, ValidityCheck):
-			print("$$ Checking if %s ...\n" % check.check_id);
+		if ValidityCheck in check.__bases__:
+			print("$$ Checking if %s ..." % check.check_id);
 			try:
 				# try to get result for test
 				testResult = check(model);
 				
 				# check if passed or not
 				if testResult.passed == False:
-					print("!! Some errors found ... \n");
-					failedTests += 1;
+					print("!! Some errors found ...");
+					failedTests += 1; # TODO: make this report the total number of errors instead?
 					
 					# dump the errors to stderr for now
 					# TODO: later on, we could dump to a specified file instead
 					for error in testResult:
 						error.report(sys.stderr);
+					print("!! ... carrying on ... \n");
 				else:
 					print("!! ... No sins here :) \n");
-					passedTest += 1;
+					passedTests += 1;
 			except:
 				sys.stderr.write("ERROR: An error occurred while trying to perform this validity test. Details follow... \n");
 				# ...
 				raise;
+				
+	# report statistics of testing
+	print("\n$$ %d of %d tests passed. There were %d failure(s) to fix.\n" % (passedTests, totalTests, failedTests))
 
 ###########################
 
