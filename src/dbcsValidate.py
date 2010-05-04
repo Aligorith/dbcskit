@@ -106,9 +106,26 @@ class Test_Entity_Keys (ValidityCheck):
 		# check each entity
 		for entity in model.entities:
 			# check that the entity has a key attribute
-			# FIXME: ignore if this is only a specialisation of types with keys...
 			if entity.key is None:
-				self += ModelError(model, entity.name, "Missing key attribute", None);
+				# get superclasses to check if can inherit key from them
+				supers = model.getEntitySuperclasses(entity);
+				
+				# TODO: weak entities should probably have a partial key
+				# in addition to the identifying relationship (i.e. which gives
+				# them a key which partially identifies them)
+				
+				# do we really have any errors?
+				if len(supers) == 0:
+					# without any superclasses to inherit a key from, 
+					# there must be a key attribute 
+					self += ModelError(model, entity.name, "Missing key attribute", None);
+				elif len(supers) > 1:
+					# review this case:
+					#	there is more than one superclass, but that means there are no multiple
+					#	keys, so maybe this should have been tackled as a union instead?!
+					#	However, our superclass check only does direct superclases, so perhaps
+					#	some cases will be wrongly caught by such a test...
+					pass;
 
 # Weak Entity
 class Test_WeakEntity_ID (ValidityCheck):

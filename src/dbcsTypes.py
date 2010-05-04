@@ -91,6 +91,50 @@ class Model:
 			return self.authors[0][:];
 		else:
 			return "";
+			
+	# Useful Getters -----------------------
+	
+	# helper function (private) - verify that a given entity is valid
+	def _check_entity_arg (self, entity):
+		# first check: is it an instance of entity
+		if isinstance(entity, Entity) == False:
+			return False;
+		# secondly, check that entity belongs to this model
+		return (entity in self.entities);
+	
+	# Get a list of the (direct) super-entities for a given entity
+	def getEntitySuperclasses (self, entity):
+		# verify that we've got a valid entity
+		if self._check_entity_arg(entity) == False:
+			raise TypeError, "Not a valid entity to get superclasses for"
+		
+		# find superclass entities (there may be more than 1)
+		matches = [];
+		
+		for e in self.entities:
+			for spec in e.specialisations:
+				if spec.hasSubclass(entity):
+					matches.append(e);
+					break; # only need the first occurance
+		
+		# return the list of matches
+		return matches;
+		
+	# Get a list of the relationships which involve the given entity
+	def getEntityRelationships (self, entity):
+		# verify that we've got a valid entity
+		if self._check_entity_arg(entity) == False:
+			raise TypeError, "Not a valid entity to find relationship participations for"
+		
+		# find relationships which use this entity in relationships
+		matches = [];
+		
+		for rel in self.relationships:
+			# add all matching links
+			matches += [link.entity for link in rel.links if link.entity == entity];
+		
+		# return the list of matches
+		return matches;
 
 # -----------
 
@@ -180,7 +224,7 @@ class WeakEntity (Entity):
 class Specialisation:
 	__slots__ = [
 		'role',				# attribute or whatever which determines which specialisation to take 
-		'total',			# total or partial specialisation (defualts to total)
+		'total',			# total or partial specialisation (defaults to total)
 		
 		'parent_entity',	# parent entity (i.e. superclass of the subclasses)
 		'derived_entities',	# list of entities derived from the parent (i.e. subclasses) 
@@ -222,6 +266,24 @@ class Specialisation:
 	
 	# Overloaded concatenation operator - for adding attributes easier
 	__add__ = add;
+	
+	# Does specialisation have the given entity as a subclass
+	def hasSubclass (self, entity, recursive=False):
+		# check each specialisation if it has the entity as a direct subclass
+		for dEntity in self.derived_entities:
+			# check if match
+			if dEntity != entity:
+				# no match, so do recursive if necessary...
+				if recursive:
+					for spec in dEntity.specialisations:
+						if spec.hasSubclass(entity):
+							return True;
+			else:
+				# match found
+				return True;
+				
+		# everything fell through, so not a subclass...
+		return False;
 		
 # Disjoint Specialisation
 # NOTE: for now, just a complete copy of the parent
